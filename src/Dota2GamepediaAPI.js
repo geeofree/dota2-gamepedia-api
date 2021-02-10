@@ -1,7 +1,6 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 
-
 class Dota2GamepediaAPI {
   constructor() {
     this.baseURL = "https://dota2.gamepedia.com"
