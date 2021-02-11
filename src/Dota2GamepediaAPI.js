@@ -1,42 +1,38 @@
-const axios = require("axios");
+const WebScraper = require("./WebScraper.js");
 const cheerio = require("cheerio");
 
 class Dota2GamepediaAPI {
   constructor() {
     this.baseURL = "https://dota2.gamepedia.com"
-    this.attributes = ["Strength", "Agility", "Intelligence"]
+    this.webScraper = new WebScraper(this.baseURL);
   }
 
   async getHeroes() {
-    const heroesPage = await axios.get(`${this.baseURL}/Heroes`);
-    const $parse = cheerio.load(heroesPage.data)
-    
-    const heroes = this.attributes.reduce((heroesObj, attribute) => {
-      heroesObj[attribute] = []
+    const tableOfHeroAttributesPage = await this.webScraper.scrape("Table_of_hero_attributes");
+    const $parse = cheerio.load(tableOfHeroAttributesPage);
+    const heroAttributesTable = $parse("table").first()
 
-      const heroesTable = $parse(`table > tbody > tr > th > span > a:contains('${attribute}')`)
-        .parents("tr")
-        .next()
-
-      $parse("div > div > a", heroesTable).each((_, hero) => {
-        const heroImage = hero.children[0].attribs
-
-        const newHero = {
-          name: hero.attribs.title,
-          url: hero.attribs.href,
-          image: {
-            url: heroImage.src,
-            alt: heroImage.alt
-          }
-        }
-
-        heroesObj[attribute].push(newHero)
+    const columns = $parse("tbody > tr > th", heroAttributesTable)
+      .map((_, column) => {
+        const columnText = $parse(column).text().replace(/\n/, '');
+        const columnTooltip = $parse("span", column).attr("title")
+        const columnName = `${columnText}${columnTooltip ? ` (${columnTooltip})` : ''}`
+        return columnName
       })
+      .toArray()
 
-      return heroesObj
-    }, {})
+    const rows = $parse("tbody > tr > td", heroAttributesTable)
+      .map((index, testing) => {
+        const columnNameIndex = index % columns.length;
+        const columnName = columns[columnNameIndex]
+        const text = $parse(testing).text();
+        const title = $parse("a", testing).attr("title");
+        const value = (title || text).replace(/\n/, '');
+        return {columnName, value}
+      })
+      .toArray()
 
-    return heroes
+    return columns
   }
 }
 
