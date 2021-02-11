@@ -21,18 +21,28 @@ class Dota2GamepediaAPI {
       })
       .toArray()
 
-    const rows = $parse("tbody > tr > td", heroAttributesTable)
-      .map((index, testing) => {
-        const columnNameIndex = index % columns.length;
-        const columnName = columns[columnNameIndex]
-        const text = $parse(testing).text();
-        const title = $parse("a", testing).attr("title");
-        const value = (title || text).replace(/\n/, '');
-        return {columnName, value}
-      })
-      .toArray()
+    const heroes = [];
+    let hero;
 
-    return columns
+    $parse("tbody > tr > td", heroAttributesTable).each((index, testing) => {
+      const columnNameIndex = index % columns.length;
+
+      if (columnNameIndex === 0) {
+        if (index > 0) {
+          heroes.push(hero)
+        }
+        hero = {}
+      }
+
+      const text = $parse(testing).text();
+      const title = $parse("a", testing).attr("title");
+      const value = (title || text).replace(/\n/, '');
+
+      const columnName = columns[columnNameIndex]
+      hero[columnName] = value
+    })
+
+    return heroes
   }
 }
 
